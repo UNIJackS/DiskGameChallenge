@@ -104,60 +104,63 @@
       * redraw the game
       */
      public void startGame(){ 
-         this.shotsRemaining = this.numShots;
-         this.score = 0;
-         this.initialiseDisks();
-         this.redraw();
-         updateScoreCompletion();
+            boolean programRunning = true;
+            while(programRunning){
+                this.shotsRemaining = this.numShots;
+                this.score = 0;
+                this.initialiseDisks();
+                this.redraw();
+                updateScoreCompletion();
 
-         long lastMoveTime = System.currentTimeMillis();
-         long lastFireUpdateTime = System.currentTimeMillis();
-         long lastScreenUpdateTime = System.currentTimeMillis();
-         bulletObject.stopShot();
+                long lastMoveTime = System.currentTimeMillis();
+                long lastFireUpdateTime = System.currentTimeMillis();
+                long lastScreenUpdateTime = System.currentTimeMillis();
+                bulletObject.stopShot();
 
-         boolean gameRunning = true;
-         while(gameRunning){
-            if(notReadingFile){
-                this.updateScoreCompletion();
-                //If game is over, print out the score
-                if ((this.haveAllDisksExplodedCompletion() || this.shotsRemaining < 0)){
-                    if(this.haveAllDisksExplodedCompletion()){
-                        UI.println("this.haveAllDisksExplodedCompletion() is true");
+                boolean gameRunning = true;
+                while(gameRunning){
+                    if(notReadingFile){
+                        long currentTime = System.currentTimeMillis();
+                        if(currentTime-lastMoveTime > 300){
+                            lastMoveTime = System.currentTimeMillis();
+                            for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
+                                disks.get(diskIndex).move(GAME_WIDTH-10,SHOOTING_RANGE_Y-10,2);
+                                
+                            }
+                            
+                        }
+                        for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
+                            disks.get(diskIndex).explode(false);
+                        }
+
+                        if(currentTime-lastFireUpdateTime>10){
+                            lastFireUpdateTime=System.currentTimeMillis();
+                            disks = bulletObject.update(disks);
+                        }
+
+                        if(currentTime-lastScreenUpdateTime>100){
+                            lastScreenUpdateTime=System.currentTimeMillis();
+                            this.updateScoreCompletion();
+                            //If game is over, print out the score
+                            if ((this.haveAllDisksExplodedCompletion() || this.shotsRemaining < 0)){
+                                if(this.haveAllDisksExplodedCompletion()){
+                                    UI.println("this.haveAllDisksExplodedCompletion() is true");
+                                }
+                                if(this.shotsRemaining < 1){
+                                    UI.println("this.shotsRemaining < 1 is true");
+                                }
+                                UI.setColor(Color.red);
+                                UI.setFontSize(24);
+                                UI.drawString("Your final score: " + this.score, GAME_WIDTH*1.0/3.0, SHOOTING_RANGE_Y*1.3);
+                                programRunning = false;
+                            }
+                            redraw();
+                        }
                     }
-                    if(this.shotsRemaining < 1){
-                        UI.println("this.shotsRemaining < 1 is true");
-                    }
-                    UI.setColor(Color.red);
-                    UI.setFontSize(24);
-                    UI.drawString("Your final score: " + this.score, GAME_WIDTH*1.0/3.0, SHOOTING_RANGE_Y*1.3);
 
-                    startGame();
-                }
-
-                long currentTime = System.currentTimeMillis();
-                if(currentTime-lastMoveTime > 300){
-                    lastMoveTime = System.currentTimeMillis();
-                    for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
-                        disks.get(diskIndex).move(GAME_WIDTH-10,SHOOTING_RANGE_Y-10,2);
-                        
-                    }
-                    
-                }
-                for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
-                    disks.get(diskIndex).explode(false);
-                }
-
-                if(currentTime-lastFireUpdateTime>10){
-                    lastFireUpdateTime=System.currentTimeMillis();
-                    disks = bulletObject.update(disks);
-                }
-
-                if(currentTime-lastScreenUpdateTime>100){
-                    lastScreenUpdateTime=System.currentTimeMillis();
-                    redraw();
-                }
             }
-         }
+         
+        }
      }
  
      /**
