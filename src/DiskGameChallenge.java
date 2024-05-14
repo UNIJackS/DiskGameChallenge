@@ -1,178 +1,230 @@
-
-// This program is copyright VUW.
-// You are granted permission to use it to construct your answer to a COMP102 assignment.
-// You may not distribute it in any other way without permission.
-
-/* Code for COMP102 - 2024T1, Assignment 7
- * Name:
- * Username:
- * ID:
- */
-
- import ecs100.*;
- import java.awt.Color;
- import java.util.*;
- import java.nio.file.*;
- import java.io.*;
- 
- /**
-  * A game in which the player has to blow up disks spread out over a shooting range.
-  * The game starts with a collection of randomly placed small disks on the upper half
-  * of the graphics pane, and a gun at the bottom.
-  * The gun is fixed in the middle of a horizontal line below the shooting range, and
-  * shoots in any direction with an angle of 180 degrees.
-  * The player fires the gun with the mouse, by releasing the mouse within the firing zone
-  * limited by an arc surrounding the upper part of the gun. That will give the direction of the shot.
-  * If a shot hits a disk, it will damage it.
-  * If the disk is damaged sufficiently, it will explode and maybe damage surrounding disks,
-  * if they are within range (Challenge).
-  * The player has a limited number of shots, and the goal is to cause the maximum damage.
-  * Each disk can report its score (based on how much damage it received - the greater the damage,
-  * the greater the score), and the score for the game is the sum of the scores for each disk.  
-  * The game is over when either the player has run out of shots or all the disks have exploded.
-  */
- 
- public class DiskGame{
-     // Constants for the game geometry: the disks in the shooting range should
-     // all be in the rectangle starting at (0,0) with a width of 500 and a height of 150
-     // The gun should be on the line at y = 300
-     private static final double GAME_WIDTH = 500;
-     private static final double SHOOTING_RANGE_Y = 150; // lowest point that a disk can be
-     private static final double GUN_X = GAME_WIDTH/2;   // current x position of the gun
-     private static final double GUN_Y = 300;
-     private static final double SHOOTING_CIRCLE = GUN_Y-SHOOTING_RANGE_Y;
- 
-     //Constants for game logic
-     private static final int DEFAULT_NUMBER_OF_SHOTS = 30;
-     private static final int DEFAULT_NUMBER_OF_DISKS = 30;
-     private int numShots = DEFAULT_NUMBER_OF_SHOTS;
-     private int numDisks = DEFAULT_NUMBER_OF_DISKS;
- 
-     //Fields for the game state
-     private double score = 0;                         // current score
-     private int shotsRemaining = this.numShots;       // How many shots are left
- 
-     private ArrayList <Disk> disks = new ArrayList<Disk>(); // The list of disks
-
-     private Bullet bulletObject = new Bullet(GAME_WIDTH,GUN_Y);
-
-     private boolean notReadingFile = true;
-
-     private double destryedDiskTotal = 0;
+import ecs100.*;
+import java.awt.Color;
+import java.util.*;
+import java.nio.file.*;
+import java.io.*;
 
 
-     /**
-      * Sets up the user interface:
-      * Set up the buttons and the mouselistener
-      */
-     public void setupGUI(){
-         /*# YOUR CODE HERE */
-         UI.setMouseListener(this::doMouse);
 
-         UI.addSlider("Number of Disks",2,60,DEFAULT_NUMBER_OF_DISKS,this::setNumDisks);
-         UI.addSlider("Number of Shots",2,60,DEFAULT_NUMBER_OF_DISKS,this::setNumShots);
+public class DiskGameChallenge {
+    // Constants for the game geometry: the disks in the shooting range should
+    // all be in the rectangle starting at (0,0) with a width of 500 and a height of 150
+    // The gun should be on the line at y = 300
+    private static final double GAME_WIDTH = 500;
+    private static final double SHOOTING_RANGE_Y = 150; // lowest point that a disk can be
+    private static final double GUN_X = GAME_WIDTH/2;   // current x position of the gun
+    private static final double GUN_Y = 300;
+    private static final double SHOOTING_CIRCLE = GUN_Y-SHOOTING_RANGE_Y;
 
-         UI.addButton("Restart", this::startGame);
-         UI.addButton("Load Game", this::loadGame);
-         UI.addButton("Save Game", this::saveGame);
- 
-         UI.addButton("Quit", UI::quit);
-         UI.setDivider(0);
-     }
- 
-     /**
-      * Set the number of disks for the next game
-      * Hint: Remember to cast to an int
-      */
-     public void setNumDisks(double value){
-         /*# YOUR CODE HERE */
-         numDisks = (int)value;
-     }
- 
-     /**
-      * Set the number of shots for the next game
-      * Hint: Remember to cast to an int
-      */
-     public void setNumShots(double value){
-         /*# YOUR CODE HERE */
-         numShots = (int)value;
-     }
- 
-     /**
-      * Set the fields of the game to their initial values,
-      * Create a new list of disks
-      * redraw the game
-      */
-     public void startGame(){ 
-            boolean programRunning = true;
-            while(programRunning){
-                this.shotsRemaining = this.numShots;
-                this.score = 0;
-                this.initialiseDisks();
-                this.redraw();
-                updateScoreCompletion();
+    //Constants for game logic
+    private static final int DEFAULT_NUMBER_OF_SHOTS = 30;
+    private static final int DEFAULT_NUMBER_OF_DISKS = 30;
+    private int numShots = DEFAULT_NUMBER_OF_SHOTS;
+    private int numDisks = DEFAULT_NUMBER_OF_DISKS;
 
-                long lastMoveTime = System.currentTimeMillis();
-                long lastFireUpdateTime = System.currentTimeMillis();
-                long lastScreenUpdateTime = System.currentTimeMillis();
-                bulletObject.stopShot();
+    //Fields for the game state
+    private double score = 0;                         // current score
+    private int shotsRemaining = this.numShots;       // How many shots are left
 
-                boolean gameRunning = true;
-                while(gameRunning){
-                    if(notReadingFile){
-                        long currentTime = System.currentTimeMillis();
-                        if(currentTime-lastMoveTime > 300){
-                            lastMoveTime = System.currentTimeMillis();
-                            for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
-                                disks.get(diskIndex).move(GAME_WIDTH-10,SHOOTING_RANGE_Y-10,2);
-                                
-                            }
-                            
-                        }
-                        for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
-                            disks.get(diskIndex).explode(false);
-                        }
+    private ArrayList <Disk> disks = new ArrayList<Disk>(); // The list of disks
 
-                        if(currentTime-lastFireUpdateTime>10){
-                            lastFireUpdateTime=System.currentTimeMillis();
-                            disks = bulletObject.update(disks);
-                        }
+    private Bullet bulletObject = new Bullet(GAME_WIDTH,GUN_Y);
 
-                        if(currentTime-lastScreenUpdateTime>100){
-                            lastScreenUpdateTime=System.currentTimeMillis();
-                            this.updateScoreCompletion();
-                            //If game is over, print out the score
-                            if ((this.haveAllDisksExplodedCompletion() || this.shotsRemaining < 0)){
-                                if(this.haveAllDisksExplodedCompletion()){
-                                    UI.println("this.haveAllDisksExplodedCompletion() is true");
-                                }
-                                if(this.shotsRemaining < 1){
-                                    UI.println("this.shotsRemaining < 1 is true");
-                                }
-                                UI.setColor(Color.red);
-                                UI.setFontSize(24);
-                                UI.drawString("Your final score: " + this.score, GAME_WIDTH*1.0/3.0, SHOOTING_RANGE_Y*1.3);
-                                programRunning = false;
-                            }
-                            redraw();
-                        }
-                    }
+    //Requests for call back functions to raise
+    private boolean saveRequested = false;
+    private boolean loadRequested = false;
+    private boolean restartRequested = false;
+    private boolean shotRequested = false;
+    private double shotRequestedX = 0;
+    private double shotRequestedY = 0;
 
+    private boolean roundRunning = true;
+
+    //buffer for disk number for score calculation
+    private int numDisksBuffer = this.numShots;
+
+
+    //---------------------------------------- Call Back Functions ----------------------------------------
+    //sets a buffer which is read at the start of a new round for the new number of disks
+    public void setNumDisksCallback(double value){
+        numDisksBuffer = (int)value;
+    }
+    //sets the number of shots to be used next restart
+    public void setNumShotsCallBack(double value){
+        numShots = (int)value;
+    }
+    //raises a restart request if the save game button is pressed to be used in the update function
+    public void restartGameCallBack(){
+        restartRequested = true;
+    }
+    //raises a load request if the load game button is pressed to be used in the update function
+    public void loadGameCallBack(){
+        loadRequested = true;
+    }
+    //raises a save request if the save game button is pressed to be used in the update function
+    public void saveGameCallBack(){
+        saveRequested =true;
+    }
+    //raises a shot request if the mouse is released inisde the firing zone
+    public void mouseCallBack(String action, double x, double y){
+        if(action.equals("released")){
+            if(isWithinFiringZone(x, y)){
+                shotRequested = true;
+                shotRequestedX = x;
+                shotRequestedY = y;
+  
             }
-         
+         }
+
+    }
+
+    //---------------------------------------- update Functions ----------------------------------------
+    //(functions are in order of when they are called in update)
+    //This saves the game to a file
+    //It is called from the update function assuming saveGameRequest is true
+    //saveGameRequest is set by the saveGameCallBack function 
+    public void saveGame(){
+        BufferedWriter bw;
+        boolean invalidInput = true;
+        while(invalidInput){
+           try{
+               String fileName = null;
+               while(fileName == null){
+                   fileName = UIFileChooser.open();
+               }
+
+               FileWriter fw = new FileWriter(fileName, false);
+               bw = new BufferedWriter(fw);
+               invalidInput =false;
+
+
+               bw.write(String.valueOf(score));
+               bw.newLine();
+               bw.write(String.valueOf(shotsRemaining));
+               bw.newLine();
+               bw.write(String.valueOf(numDisks));
+               bw.newLine();
+
+               for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
+                   bw.write(String.valueOf(disks.get(diskIndex).toString()));
+                   bw.newLine();
+               }
+               bw.close();
+
+           }catch(IOException e){
+               UI.println("invalid file name");
+           }
         }
-     }
+    }
+
+    //This loads a save file
+    //It is called from the update function assuming loadGameRequest is true
+    //loadGameRequest is set by the loadGameCallBack function 
+    public void loadGame(){
+         boolean invalidInput = true;
+         Scanner file = new Scanner("");
+         while(invalidInput){
+            try{
+                file = new Scanner(Path.of(UIFileChooser.open()));
+                invalidInput = false;
+            }catch(IOException e){
+                UI.println("error" + e);
+            }
+        }
+
+        score = file.nextDouble();
+        shotsRemaining = file.nextInt();
+        numDisks = file.nextInt();
+        disks = new ArrayList<Disk>();
+        while(file.hasNext()){
+            disks.add(new Disk(file.nextDouble(),file.nextDouble(),file.nextInt()));
+        }
+        file.close();
+        return;
+    }
+
+    
+    //This checks if the mouse click was inside the fireing zone
+    //It is called from the update function
+    public boolean isWithinFiringZone(double x, double y){
+        // an easy approximation is to pretend it is the enclosing rectangle.
+        // It is nicer to do a little bit of geometry and get it right
+        return (x >= GUN_X-SHOOTING_CIRCLE/2) && (y >= GUN_Y-SHOOTING_CIRCLE/2)
+        && (x <= GUN_X + SHOOTING_CIRCLE/2) && (y <= GUN_Y);
+    }
+
+    //This updates the users score 
+    //It is called from the update function
+    public void updateScoreCompletion(){
+        
+        // Hint: Remember to account for the broken disks
+        /*# YOUR CODE HERE */
+        double scoreTotal = 0;
+       for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
+           
+           scoreTotal += disks.get(diskIndex).score();
+       }
+       //for all the destroyed disks
+       scoreTotal += 150 * (numDisks - disks.size());
+
+       score = scoreTotal;
+       UI.printMessage("score:" + scoreTotal);
+    }
+
+    //This draws everything to the screen 
+    //It is called from the update function
+    public void draw(){
+        UI.clearGraphics();
+         //Redraw the boundary of the shooting range
+         UI.setColor(Color.black);
+         UI.drawRect(0,0, GAME_WIDTH, GUN_Y);
+         UI.setColor(Color.gray);
+         UI.drawLine(0, SHOOTING_RANGE_Y, GAME_WIDTH, SHOOTING_RANGE_Y);
  
-     /**
-      * Make a new ArrayList of disks with new disks at random positions
-      * within the shooting range.
-      * Remember to use the CONSTANTS
-      * Completion: ensure than none of them are overlapping.
-      */
-     public void initialiseDisks(){
-         /*# YOUR CODE HERE */
-         disks = new ArrayList<Disk>();
-         for(int currentDisk =0; currentDisk < numDisks; currentDisk +=1){
+         // Redraw the shooting zone in gray
+         UI.setColor(Color.lightGray);
+         UI.fillArc(GUN_X-SHOOTING_CIRCLE/2, GUN_Y-SHOOTING_CIRCLE/2, SHOOTING_CIRCLE, SHOOTING_CIRCLE, 0, 180);
+ 
+         // Redraw the gun in black
+         UI.setColor(Color.black);
+         UI.fillRect(GUN_X-5, GUN_Y-5, 10, 10);
+
+         for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
+            disks.get(diskIndex).move(GAME_WIDTH,SHOOTING_RANGE_Y,5.0);
+            disks.get(diskIndex).draw();
+         }
+
+         bulletObject.draw();
+
+         for(int currentRound =0; currentRound < shotsRemaining; currentRound +=1){
+            UI.setColor(Color.red.darker());
+            UI.fillRect(3,GUN_Y -4 - 4*currentRound, 3, 3);
+         }
+
+    }
+
+
+    //---------------------------------------- Run Functions ----------------------------------------
+    //(functions are in order of when they are called in run)
+    //setsup the call back functions and screen
+    //It is called from the run function
+    public void startup(){
+        UI.setMouseListener(this::mouseCallBack);
+        UI.addSlider("Number of Disks",2,60,DEFAULT_NUMBER_OF_DISKS,this::setNumDisksCallback);
+        UI.addSlider("Number of Shots",2,60,DEFAULT_NUMBER_OF_DISKS,this::setNumShotsCallBack);
+        UI.addButton("Restart", this::restartGameCallBack);
+        UI.addButton("Load Game", this::loadGameCallBack);
+        UI.addButton("Save Game", this::saveGameCallBack);
+
+        UI.addButton("Quit", UI::quit);
+        UI.setDivider(0);
+    }
+
+    //This updates the disks list with new disks at the start of each round 
+    //It is called from the reset function
+    public void initialiseDisks(){
+        disks = new ArrayList<Disk>();
+        for(int currentDisk =0; currentDisk < numDisks; currentDisk +=1){
             boolean invalidDisk = true;
             while(invalidDisk){
                 
@@ -196,209 +248,86 @@
                 }
                 
             }
-         }
-
-     }
- 
-     /**
-      * Respond to the mouse
-      */
-     public void doMouse(String action, double x, double y){
-         /*# YOUR CODE HERE */
-
-         UI.println("mouse clicked");
-
-         if(action.equals("released")){
-            if(shotsRemaining > 0 ){
-                if(isWithinFiringZone(x, y)&& bulletObject.isShotInProgress()){
-                    bulletObject.startShot(x, y);
-                    shotsRemaining -= 1;
-  
-                }
-                
-            }else{
-                startGame();
-            }
-            
-         }
- 
-     }
- 
-     /**
-      * Is the given position within the firing zone
-      */
-     public boolean isWithinFiringZone(double x, double y){
-         // an easy approximation is to pretend it is the enclosing rectangle.
-         // It is nicer to do a little bit of geometry and get it right
-         return (x >= GUN_X-SHOOTING_CIRCLE/2) && (y >= GUN_Y-SHOOTING_CIRCLE/2)
-         && (x <= GUN_X + SHOOTING_CIRCLE/2) && (y <= GUN_Y);
-     }
-
-
- 
-     /**
-      * Are all the disks exploded?
-      * Useful for telling whether the game is over.
-      */
-     public boolean haveAllDisksExplodedCompletion(){
-         /*# YOUR CODE HERE */
-         if(disks.size() > 0){
-            return false;
-        }else{
-            return true;
         }
-        
-     }
- 
-     /**
-      * Update the score field, by summing the scores of each disk
-      * Score is 150 for exploded disks, 50 for disks with 2 hits, and 20 for disks with 1 hit.
-      */
-     public void updateScoreCompletion(){
-         // Hint: Remember to account for the broken disks
-         /*# YOUR CODE HERE */
-         double scoreTotal = 0;
-        for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
-            
-            scoreTotal += disks.get(diskIndex).score();
-        }
-        //for all the destroyed disks
-        scoreTotal += 150 * (numDisks - disks.size());
+    }
 
-        score = scoreTotal;
-         UI.printMessage("score:" + scoreTotal);
-     }
- 
-     /**
-      *  Redraws the game:
-      *  - the boundary of the shooting range (done for you)
-      *  - the shooting zone in gray (done for you)
-      *  - the gun in black (done for you)
-      *  - the disks
-      *  - the pile of remaining shot (Completion)
-      * 
-      */
-     public void redraw(){
-
-        
-         UI.clearGraphics();
-         //Redraw the boundary of the shooting range
-         UI.setColor(Color.black);
-         UI.drawRect(0,0, GAME_WIDTH, GUN_Y);
-         UI.setColor(Color.gray);
-         UI.drawLine(0, SHOOTING_RANGE_Y, GAME_WIDTH, SHOOTING_RANGE_Y);
- 
-         // Redraw the shooting zone in gray
-         UI.setColor(Color.lightGray);
-         UI.fillArc(GUN_X-SHOOTING_CIRCLE/2, GUN_Y-SHOOTING_CIRCLE/2, SHOOTING_CIRCLE, SHOOTING_CIRCLE, 0, 180);
- 
-         // Redraw the gun in black
-         UI.setColor(Color.black);
-         UI.fillRect(GUN_X-5, GUN_Y-5, 10, 10);
- 
-         // Redraw the disks, and
-         // For the Completion, the pile of remaining rounds in red
-         /*# YOUR CODE HERE */
-
-        for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
-            disks.get(diskIndex).draw();
-        }
-
-        bulletObject.draw();
-
-        for(int currentRound =0; currentRound < shotsRemaining; currentRound +=1){
-            UI.setColor(Color.red.darker());
-            UI.fillRect(3,GUN_Y -4 - 4*currentRound, 3, 3);
-        }
+    //resets the game for a new round
+    //It is called from the run function
+    public void reset(){
+        numDisks = numDisksBuffer;
+        shotsRemaining = numShots;
+        initialiseDisks();
+        bulletObject.stopShot();
+    }
     
- 
-     }
- 
-     /**
-      * Ask the user for a file to open,
-      * then read all the game attributes
-      * (which must mirror what was saved in the saveGame method)
-      * re-create the game
-      */    
-     public void loadGame(){
-         /*# YOUR CODE HERE */
-         notReadingFile = true;
-         boolean invalidInput = true;
-         Scanner file = new Scanner("");
-         while(invalidInput){
-            try{
-                file = new Scanner(Path.of(UIFileChooser.open()));
-                invalidInput = false;
-            }catch(IOException e){
-                UI.println("error" + e);
-            }
+    //This is the core of the program and is called every frame
+    //It handles the restart, save, load and fire requests, updates the score and redraws the screen
+    //It is called from the run function
+    public long update(long lastUpdateTime){
+        if(disks.size() < 1 || shotsRemaining  < 1){
+            roundRunning = false;
+            return(0);
         }
 
-        score = file.nextDouble();
-        UI.println("Score read");
-        shotsRemaining = file.nextInt();
-        UI.println("shotsRemaining read");
-        numDisks = file.nextInt();
-        UI.println("numDisks read");
-        disks = new ArrayList<Disk>();
-        while(file.hasNext()){
-            disks.add(new Disk(file.nextDouble(),file.nextDouble(),file.nextInt()));
-        }
-        UI.println("disks read");
-
-        notReadingFile = false;
-     }
- 
-     /**
-      * Ask the user to select a file and save the current game to the selected file
-      * You need to save:
-      * - The current score and the number of remaining shots
-      * - The coordinates and the damage of each disk
-      *   Hint: use the toString method
-      */
-     public void saveGame(){
-         /*# YOUR CODE HERE */
-         BufferedWriter bw;
-         boolean invalidInput = true;
-         while(invalidInput){
-            try{
-                String fileName = null;
-                while(fileName == null){
-                    fileName = UIFileChooser.open();
-                }
-
-                FileWriter fw = new FileWriter(fileName, false);
-                bw = new BufferedWriter(fw);
-                invalidInput =false;
-
-
-                bw.write(String.valueOf(score));
-                bw.newLine();
-                bw.write(String.valueOf(shotsRemaining));
-                bw.newLine();
-                bw.write(String.valueOf(numDisks));
-                bw.newLine();
-
-                for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
-                    bw.write(String.valueOf(disks.get(diskIndex).toString()));
-                    bw.newLine();
-                }
-                bw.close();
-
-            }catch(IOException e){
-                UI.println("invalid file name");
+        bulletObject.update(disks);
+        long currentTime = System.currentTimeMillis();
+        if(currentTime-lastUpdateTime > 100){
+            lastUpdateTime = System.currentTimeMillis();
+            //handles the restart request from the call back fucntion
+            if(restartRequested){  
+                restartRequested =false;
+                roundRunning = false;
             }
-         }
+            //handles the save request from the call back fucntion
+            if(saveRequested){ 
+                saveRequested =false;
+                saveGame();
+            }
+            //handles the load request from the call back fucntion
+            if(loadRequested){ 
+                loadRequested =false;   
+                loadGame();
+                //stops a shot if it is progress 
+                bulletObject.stopShot();
+            }
+            //handles the shot request from the call back fucntion
+            if(shotRequested){
+                shotRequested = false;  
+                shotsRemaining = bulletObject.startShot(shotRequestedX, shotRequestedY, shotsRemaining);
+            }
 
-         
+            updateScoreCompletion();
+            draw();
+        }
 
-     }
- 
-     public static void main(String[] args){
-         DiskGame dg = new DiskGame();
-         dg.setupGUI();
-         dg.startGame();
-     }
- 
- }
- 
+        return(lastUpdateTime);
+    }
+    
+    //This shows the user their score for 3 seconds
+    //It is called from the run function
+    public void showScore(){
+        UI.setColor(Color.red);
+        UI.setFontSize(24);
+        UI.drawString("Your final score: " + score, GAME_WIDTH*1.0/3.0, SHOOTING_RANGE_Y*1.3);
+        UI.sleep(3000);
+    }
+
+    //This is the main loop of the program and calls everything else
+    public void run(){
+        startup();
+        while(true){
+            reset();
+            roundRunning = true;
+            long lastUpdateTime = System.currentTimeMillis();
+            while(roundRunning){
+                lastUpdateTime = update(lastUpdateTime);
+            }
+            showScore();
+        }
+    }
+
+    public static void main(String[] args){
+        DiskGameChallenge dg = new DiskGameChallenge();
+        dg.run();
+    }
+}

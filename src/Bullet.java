@@ -17,6 +17,8 @@ public class Bullet {
     private double step_X;
 
 
+    // GAME_WIDTH is the width of the playable are
+    // GUN_Y is the height of the playable are from the top of the screen
     public Bullet(double GAME_WIDTH, double GUN_Y){
         this.GAME_WIDTH = GAME_WIDTH;
         xPosInital = GAME_WIDTH/2;
@@ -27,10 +29,6 @@ public class Bullet {
         noShotInProgress = true;
     }
 
-    public boolean isShotInProgress(){
-        return noShotInProgress;
-    }
-
     public void stopShot(){
         noShotInProgress = true;
         xpos = xPosInital;
@@ -38,15 +36,19 @@ public class Bullet {
     }
     
 
-    //called to initaite a shot 
-    public void startShot(double x,double y){
+    //attempts to initaite a shot if one is not already in progress it succedes
+    //if the shot is sucessfully initated it decreasese the shots remaining by one
+    public int startShot(double x,double y,int shotsRemaining){
         if(noShotInProgress){
+            shotsRemaining -= 1;
             xpos = xPosInital;
             ypos = yPosInital;
             step_X = (xPosInital-x)/(y-yPosInital);
             timeSinceLastUpdate = System.currentTimeMillis();
             noShotInProgress = false;
         }
+
+        return shotsRemaining;
     }
 
     //called to update the shot every frame
@@ -57,8 +59,8 @@ public class Bullet {
             if((xpos < 0 || ypos < 0 || xpos > GAME_WIDTH)){
                 this.stopShot();
             }
-            //if the time since the last update is greater than 5 milliseconds update its position
-            if(System.currentTimeMillis() -timeSinceLastUpdate > 5){
+            //if the time since the last update is greater than 2 milliseconds update its position
+            if(System.currentTimeMillis() -timeSinceLastUpdate > 2){
                 timeSinceLastUpdate = System.currentTimeMillis();
                 ypos -= 1;
                 xpos += step_X;
@@ -83,7 +85,7 @@ public class Bullet {
     }
 
     //checks if the shot has hit a disk
-    public Disk getHitDisk(double shotX, double shotY,ArrayList <Disk> disks){         
+    private Disk getHitDisk(double shotX, double shotY,ArrayList <Disk> disks){         
         for(int diskIndex =0; diskIndex < disks.size(); diskIndex +=1){
             if(disks.get(diskIndex).isOn(shotX,shotY)){
                return disks.get(diskIndex);
@@ -93,8 +95,8 @@ public class Bullet {
     }
 
     //damadges the nabours if a disk if a disk expolodes
-    public void damageNeighbours(Disk disk,ArrayList <Disk> disks){
-       disk.explode(true);
+    private void damageNeighbours(Disk disk,ArrayList <Disk> disks){
+       disk.explode();
        disks.remove(disk);
        for(int diskIndex =0; diskIndex < disks.size()-1; diskIndex +=1){
            if(disks.get(diskIndex).isWithinRange(disk)){

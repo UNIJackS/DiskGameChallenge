@@ -41,10 +41,7 @@
      private double centerX;
      private double centerY;
      private int damage = 0; // Current damage level of this disk (ranging from 0 to 3)
-
-     private long explosionStartTime;
-     private boolean explsionInProgress = false;
-
+ 
      /**
       * Construct a new Disk object.
       * Parameters are the coordinates of the center of the disk.
@@ -66,8 +63,8 @@
  
      }
 
-     //-------------Jacks Methods-------------
-    public void move(double maxWidth, double maxHeight,double multiplyer) {
+
+     public void move(double maxWidth, double maxHeight,double multiplyer) {
         Random r = new Random(); 
          long seconds = System.currentTimeMillis() / 1000l;
          r.setSeed(seconds); 
@@ -96,9 +93,6 @@
             }
         }
     }
-
-
-    //-------------Jacks Methods End-------------
  
      /** COMPLETION
       * Return a string describing the disk: the coordinates of the center of the disk,
@@ -174,37 +168,16 @@
      /**
       * Make a visual effect of the disk exploding
       */
-     public void explode(boolean start) {
-        if(start){
-            explosionStartTime = System.currentTimeMillis();
-            explsionInProgress = true;
-        }
-
-        if(explsionInProgress){
-            double currentTime = System.currentTimeMillis();
-            if(explosionStartTime-currentTime <500){
-                UI.setColor(Color.red);
-                UI.setLineWidth(8);
-                UI.invertOval(this.centerX - EXPLOSION_RANGE+4, this.centerY-EXPLOSION_RANGE+4,EXPLOSION_RANGE*2-8, EXPLOSION_RANGE*2-8);
-                UI.setLineWidth(1);
-                
-            }
-
-            if(explosionStartTime-currentTime <1000 && explosionStartTime-currentTime >500){
-                UI.setColor(Color.red);
-                UI.setLineWidth(8);
-                UI.invertOval(this.centerX - EXPLOSION_RANGE+4, this.centerY-EXPLOSION_RANGE+4,EXPLOSION_RANGE*2-8, EXPLOSION_RANGE*2-8);
-                UI.setLineWidth(1);
-            }
-
-            if(explosionStartTime-currentTime > 1000){
-                UI.eraseOval(this.centerX - DIAMETER/2, this.centerY-DIAMETER/2, DIAMETER, DIAMETER);
-                UI.setLineWidth(1);
-            }
-        }
-
-
-         
+     public void explode() {
+         UI.setColor(Color.red);
+         UI.setLineWidth(8);
+         UI.invertOval(this.centerX - EXPLOSION_RANGE+4, this.centerY-EXPLOSION_RANGE+4,
+             EXPLOSION_RANGE*2-8, EXPLOSION_RANGE*2-8);
+         UI.sleep(100);
+         UI.invertOval(this.centerX - EXPLOSION_RANGE+4, this.centerY-EXPLOSION_RANGE+4,
+             EXPLOSION_RANGE*2-8, EXPLOSION_RANGE*2-8);
+         UI.eraseOval(this.centerX - DIAMETER/2, this.centerY-DIAMETER/2, DIAMETER, DIAMETER);
+         UI.setLineWidth(1);
      }
  
      /**
