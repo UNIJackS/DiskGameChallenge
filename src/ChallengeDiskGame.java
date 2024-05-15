@@ -17,7 +17,7 @@ public class ChallengeDiskGame {
     private static final double SHOOTING_CIRCLE = GUN_Y-SHOOTING_RANGE_Y;
 
     //Constants for game logic
-    private static final int DEFAULT_NUMBER_OF_SHOTS = 5;
+    private static final int DEFAULT_NUMBER_OF_SHOTS = 30;
     private static final int DEFAULT_NUMBER_OF_DISKS = 30;
     private int numShots = DEFAULT_NUMBER_OF_SHOTS;
     private int numDisks = DEFAULT_NUMBER_OF_DISKS;
