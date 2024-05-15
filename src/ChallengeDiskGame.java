@@ -6,7 +6,7 @@ import java.io.*;
 
 
 
-public class DiskGameChallenge {
+public class ChallengeDiskGame {
     // Constants for the game geometry: the disks in the shooting range should
     // all be in the rectangle starting at (0,0) with a width of 500 and a height of 150
     // The gun should be on the line at y = 300
@@ -17,7 +17,7 @@ public class DiskGameChallenge {
     private static final double SHOOTING_CIRCLE = GUN_Y-SHOOTING_RANGE_Y;
 
     //Constants for game logic
-    private static final int DEFAULT_NUMBER_OF_SHOTS = 30;
+    private static final int DEFAULT_NUMBER_OF_SHOTS = 5;
     private static final int DEFAULT_NUMBER_OF_DISKS = 30;
     private int numShots = DEFAULT_NUMBER_OF_SHOTS;
     private int numDisks = DEFAULT_NUMBER_OF_DISKS;
@@ -25,10 +25,12 @@ public class DiskGameChallenge {
     //Fields for the game state
     private double score = 0;                         // current score
     private int shotsRemaining = this.numShots;       // How many shots are left
+    
+    private int numDisksBuffer = this.numDisks; //buffer for disk number for score calculation
 
-    private ArrayList <Disk> disks = new ArrayList<Disk>(); // The list of disks
+    private ArrayList <ChallengeDisk> disks = new ArrayList<ChallengeDisk>(); // The list of disks
 
-    private Bullet bulletObject = new Bullet(GAME_WIDTH,GUN_Y);
+    private ChallengeShot shotObject = new ChallengeShot(GAME_WIDTH,GUN_Y);
 
     //Requests for call back functions to raise
     private boolean saveRequested = false;
@@ -40,8 +42,7 @@ public class DiskGameChallenge {
 
     private boolean roundRunning = true;
 
-    //buffer for disk number for score calculation
-    private int numDisksBuffer = this.numShots;
+
 
 
     //---------------------------------------- Call Back Functions ----------------------------------------
@@ -121,6 +122,8 @@ public class DiskGameChallenge {
     //It is called from the update function assuming loadGameRequest is true
     //loadGameRequest is set by the loadGameCallBack function 
     public void loadGame(){
+         //stops a shot if it is progress 
+         shotObject.stop();
          boolean invalidInput = true;
          Scanner file = new Scanner("");
          while(invalidInput){
@@ -135,9 +138,9 @@ public class DiskGameChallenge {
         score = file.nextDouble();
         shotsRemaining = file.nextInt();
         numDisks = file.nextInt();
-        disks = new ArrayList<Disk>();
+        disks = new ArrayList<ChallengeDisk>();
         while(file.hasNext()){
-            disks.add(new Disk(file.nextDouble(),file.nextDouble(),file.nextInt()));
+            disks.add(new ChallengeDisk(file.nextDouble(),file.nextDouble(),file.nextInt()));
         }
         file.close();
         return;
@@ -194,7 +197,7 @@ public class DiskGameChallenge {
             disks.get(diskIndex).draw();
          }
 
-         bulletObject.draw();
+         shotObject.draw();
 
          for(int currentRound =0; currentRound < shotsRemaining; currentRound +=1){
             UI.setColor(Color.red.darker());
@@ -208,10 +211,10 @@ public class DiskGameChallenge {
     //(functions are in order of when they are called in run)
     //setsup the call back functions and screen
     //It is called from the run function
-    public void startup(){
+    public void setupGUI(){
         UI.setMouseListener(this::mouseCallBack);
         UI.addSlider("Number of Disks",2,60,DEFAULT_NUMBER_OF_DISKS,this::setNumDisksCallback);
-        UI.addSlider("Number of Shots",2,60,DEFAULT_NUMBER_OF_DISKS,this::setNumShotsCallBack);
+        UI.addSlider("Number of Shots",2,60,DEFAULT_NUMBER_OF_SHOTS,this::setNumShotsCallBack);
         UI.addButton("Restart", this::restartGameCallBack);
         UI.addButton("Load Game", this::loadGameCallBack);
         UI.addButton("Save Game", this::saveGameCallBack);
@@ -223,7 +226,7 @@ public class DiskGameChallenge {
     //This updates the disks list with new disks at the start of each round 
     //It is called from the reset function
     public void initialiseDisks(){
-        disks = new ArrayList<Disk>();
+        disks = new ArrayList<ChallengeDisk>();
         for(int currentDisk =0; currentDisk < numDisks; currentDisk +=1){
             boolean invalidDisk = true;
             while(invalidDisk){
@@ -232,7 +235,7 @@ public class DiskGameChallenge {
 
                 int yPos = (int)((Math.random()*(SHOOTING_RANGE_Y-20))+10);
 
-                disks.add(new Disk(xPos,yPos));
+                disks.add(new ChallengeDisk(xPos,yPos));
 
                 invalidDisk = false;
 
@@ -257,7 +260,7 @@ public class DiskGameChallenge {
         numDisks = numDisksBuffer;
         shotsRemaining = numShots;
         initialiseDisks();
-        bulletObject.stopShot();
+        shotObject.stop();
     }
     
     //This is the core of the program and is called every frame
@@ -269,7 +272,7 @@ public class DiskGameChallenge {
             return(0);
         }
 
-        bulletObject.update(disks);
+        shotObject.update(disks);
         long currentTime = System.currentTimeMillis();
         if(currentTime-lastUpdateTime > 100){
             lastUpdateTime = System.currentTimeMillis();
@@ -287,13 +290,11 @@ public class DiskGameChallenge {
             if(loadRequested){ 
                 loadRequested =false;   
                 loadGame();
-                //stops a shot if it is progress 
-                bulletObject.stopShot();
             }
             //handles the shot request from the call back fucntion
             if(shotRequested){
                 shotRequested = false;  
-                shotsRemaining = bulletObject.startShot(shotRequestedX, shotRequestedY, shotsRemaining);
+                shotsRemaining = shotObject.start(shotRequestedX, shotRequestedY, shotsRemaining);
             }
 
             updateScoreCompletion();
@@ -314,7 +315,8 @@ public class DiskGameChallenge {
 
     //This is the main loop of the program and calls everything else
     public void run(){
-        startup();
+        UI.println("numDisks"+numDisks);
+        setupGUI();
         while(true){
             reset();
             roundRunning = true;
@@ -327,7 +329,7 @@ public class DiskGameChallenge {
     }
 
     public static void main(String[] args){
-        DiskGameChallenge dg = new DiskGameChallenge();
+        ChallengeDiskGame dg = new ChallengeDiskGame();
         dg.run();
     }
 }

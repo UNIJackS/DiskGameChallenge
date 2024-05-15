@@ -29,7 +29,7 @@
   *   - isOverlapping(otherDisk) Whether this disk overlaps the other disk.
   *   - isWithinRange(otherDisk) Whether this disk is within the damage range of the other disk.
   */
- public class Disk {
+ public class ChallengeDisk {
      private static final int DIAMETER = 20;
  
      //Damage level at which a disk will explode.
@@ -46,7 +46,7 @@
       * Construct a new Disk object.
       * Parameters are the coordinates of the center of the disk.
       */
-     public Disk(double x, double y) {
+     public ChallengeDisk(double x, double y) {
          this.centerX = x;
          this.centerY = y;
      }
@@ -55,7 +55,7 @@
       * Construct a new Disk object.
       * Parameters are the coordinates of the center of the disk, and its damage.
       */
-     public Disk(double x, double y, int d) {
+     public ChallengeDisk(double x, double y, int d) {
          /*# YOUR CODE HERE */
          this.centerX = x;
          this.centerY = y;
@@ -64,6 +64,7 @@
      }
 
 
+     //randomly moves the postion by 0 to the multiplyer
      public void move(double maxWidth, double maxHeight,double multiplyer) {
         Random r = new Random(); 
          long seconds = System.currentTimeMillis() / 1000l;
@@ -149,7 +150,7 @@
       *  Is this disk overlapping with the other disk?
       *  If either disk is broken, then they aren't overlapping
       */
-     public boolean isOverlapping(Disk other) {
+     public boolean isOverlapping(ChallengeDisk other) {
          if (this.isBroken() || other.isBroken()) return false;
          double dx = other.centerX - this.centerX;
          double dy = other.centerY - this.centerY;
@@ -159,7 +160,7 @@
      /**
       *  Is this disk withing range of explosion damage from the other disk 
       */
-     public boolean isWithinRange(Disk other) {
+     public boolean isWithinRange(ChallengeDisk other) {
          double dx = other.centerX - this.centerX;
          double dy = other.centerY - this.centerY;
          return (Math.hypot(dx,dy) < EXPLOSION_RANGE);
